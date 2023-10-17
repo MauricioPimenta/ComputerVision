@@ -234,9 +234,9 @@ class MainWindow(QMainWindow):
 		self.ax1.set_title("Imagem")
 		self.canvas1 = FigureCanvas(self.fig1)
 
-		##### Falta acertar os limites do eixo X
+		##### Falta acertar os limites do eixo X - grafico 2D
 
-		##### Falta acertar os limites do eixo Y
+		##### Falta acertar os limites do eixo Y - grafico 2D
 
 		##### Você deverá criar a função de projeção
 		object_2d = self.projection_2d()
@@ -253,6 +253,10 @@ class MainWindow(QMainWindow):
 
 		##### Falta plotar o seu objeto 3D e os referenciais da câmera e do mundo
 
+		# Plot the points drawing the lines
+		self.ax2.plot(self.objeto_original[0,:],self.objeto_original[1,:],self.objeto_original[2,:],'r')
+		self.ax2.set_aspect('equal')
+
 		self.canvas2 = FigureCanvas(self.fig2)
 		canvas_layout.addWidget(self.canvas2)
 
@@ -267,6 +271,7 @@ class MainWindow(QMainWindow):
 		return
 
 	def update_world(self,line_edits):
+		
 		return
 
 	def update_cam(self,line_edits):
