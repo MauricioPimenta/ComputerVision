@@ -1,4 +1,5 @@
 import sys
+from matplotlib import axes, axis
 import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGridLayout, QLabel, QWidget, QLineEdit, QHBoxLayout, QVBoxLayout, QPushButton,QGroupBox
 from PyQt5.QtGui import QDoubleValidator
@@ -243,12 +244,13 @@ class MainWindow(QMainWindow):
 
 		##### Falta plotar o object_2d que retornou da projeção
 
-		self.ax1.grid('True')
+		self.ax1.grid(True)
 		self.ax1.set_aspect('equal')
 		canvas_layout.addWidget(self.canvas1)
 
 		# Criar um objeto FigureCanvas para exibir o gráfico 3D
 		self.fig2 = plt.figure()
+		#self.ax2 = plt.Axes
 		self.ax2 = self.fig2.add_subplot(111, projection='3d')
 
 		##### Falta plotar o seu objeto 3D e os referenciais da câmera e do mundo
@@ -256,6 +258,7 @@ class MainWindow(QMainWindow):
 		# Plot the points drawing the lines
 		self.ax2.plot(self.objeto_original[0,:],self.objeto_original[1,:],self.objeto_original[2,:],'r')
 		self.ax2.set_aspect('equal')
+
 
 		self.canvas2 = FigureCanvas(self.fig2)
 		canvas_layout.addWidget(self.canvas2)
@@ -271,7 +274,7 @@ class MainWindow(QMainWindow):
 		return
 
 	def update_world(self,line_edits):
-		
+
 		return
 
 	def update_cam(self,line_edits):
