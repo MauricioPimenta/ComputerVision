@@ -45,8 +45,11 @@ class MainWindow(QMainWindow):
 		filename = 'megaman.STL'
 		self.objeto_original = getObjFromFile(filename); #modificar
 		self.objeto = self.objeto_original
-		self.cam_original = [] #modificar
-		self.cam = [] #modificar
+		self.cam_original = np.array([	[1, 0, 0, 0],
+										[0, 1, 0, 0],
+										[0, 0, 1, 0],
+										[0, 0, 0, 1]]) #modificar
+		self.cam = self.cam_original #modificar
 		self.px_base = 1280  #modificar
 		self.px_altura = 720 #modificar
 		self.dist_foc = 50 #modificar
