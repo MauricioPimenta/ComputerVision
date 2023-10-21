@@ -32,9 +32,10 @@ class MainWindow(QMainWindow):
 	def __init__(self):
 		super().__init__()
 
-		#definindo as variaveis
+		# definindo as variaveis
 		self.set_variables()
-		#Ajustando a tela
+
+  		#Ajustando a tela
 		self.setWindowTitle("Grid Layout")
 		self.setGeometry(100, 100,1280 , 720)
 		self.setup_ui()
@@ -188,9 +189,8 @@ class MainWindow(QMainWindow):
 		return line_edit_widget
 
 
-
 	def create_cam_widget(self, title):
-		# Criar um widget para agrupar os QLineEdit
+	 # Criar um widget para agrupar os QLineEdit
 		line_edit_widget = QGroupBox(title)
 		line_edit_layout = QVBoxLayout()
 		line_edit_widget.setLayout(line_edit_layout)
@@ -298,7 +298,7 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    main_window = MainWindow()
-    main_window.show()
-    sys.exit(app.exec_())
+	app = QApplication(sys.argv)
+	main_window = MainWindow()
+	main_window.show()
+	sys.exit(app.exec_())
