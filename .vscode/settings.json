@@ -38,5 +38,10 @@
 			"name": "fastapi",
 			"depth": 2
 		}
-	]
+	],
+	"[yaml]": {
+	},
+	"editor.insertSpaces": false,
+	"editor.indentSize": "tabSize",
+	"editor.stickyTabStops": true
 }

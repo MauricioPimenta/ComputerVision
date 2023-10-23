@@ -44,13 +44,13 @@ class MainWindow(QMainWindow):
 
 	def set_variables(self):
 		filename = 'megaman.STL'
-		self.objeto_original = getObjFromFile(filename); #modificar
-		self.objeto = self.objeto_original
+		self.objeto_original = getObjFromFile(filename) #modificar
+		self.objeto = self.objeto_original.copy()
 		self.cam_original = np.array([	[1, 0, 0, 0],
 										[0, 1, 0, 0],
 										[0, 0, 1, 0],
 										[0, 0, 0, 1]]) #modificar
-		self.cam = self.cam_original #modificar
+		self.cam = self.cam_original.copy() #modificar
 		self.px_base = 1280  #modificar
 		self.px_altura = 720 #modificar
 		self.dist_foc = 50 #modificar
@@ -289,11 +289,11 @@ class MainWindow(QMainWindow):
 	def generate_intrinsic_params_matrix(self):
 		return
 
-
 	def update_canvas(self):
 		return
 
 	def reset_canvas(self):
+
 		return
 
 
