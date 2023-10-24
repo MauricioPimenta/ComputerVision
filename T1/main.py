@@ -12,21 +12,21 @@ from stl import mesh
 ###### Crie suas funções de translação, rotação, criação de referenciais, plotagem de setas e qualquer outra função que precisar
 
 def getObjFromFile(filename):
-		# Load the STL files and add the vectors to the plot
-		your_mesh = mesh.Mesh.from_file(filename)
+	# Load the STL files and add the vectors to the plot
+	your_mesh = mesh.Mesh.from_file(filename)
 
-		# Get the x, y, z coordinates contained in the mesh structure that are the
-		# vertices of the triangular faces of the object
-		x = your_mesh.x.flatten()
-		y = your_mesh.y.flatten()
-		z = your_mesh.z.flatten()
+	# Get the x, y, z coordinates contained in the mesh structure that are the
+	# vertices of the triangular faces of the object
+	x = your_mesh.x.flatten()
+	y = your_mesh.y.flatten()
+	z = your_mesh.z.flatten()
 
-		# Get the vectors that define the triangular faces that form the 3D object
-		object = your_mesh.vectors
+	# Get the vectors that define the triangular faces that form the 3D object
+	object = your_mesh.vectors
 
-		# Create the 3D object from the x,y,z coordinates and add the additional array of ones to
-		# represent the object using homogeneous coordinates
-		return np.array([x.T,y.T,z.T,np.ones(x.size)])
+	# Create the 3D object from the x,y,z coordinates and add the additional array of ones to
+	# represent the object using homogeneous coordinates
+	return np.array([x.T,y.T,z.T,np.ones(x.size)])
 
 class MainWindow(QMainWindow):
 	def __init__(self):
@@ -40,8 +40,6 @@ class MainWindow(QMainWindow):
 		self.setGeometry(100, 100,1280 , 720)
 		self.setup_ui()
 
-
-
 	def set_variables(self):
 		filename = 'megaman.STL'
 		self.objeto_original = getObjFromFile(filename) #modificar
@@ -50,6 +48,7 @@ class MainWindow(QMainWindow):
 										[0, 1, 0, 0],
 										[0, 0, 1, 0],
 										[0, 0, 0, 1]]) #modificar
+		
 		self.cam = self.cam_original.copy() #modificar
 		self.px_base = 1280  #modificar
 		self.px_altura = 720 #modificar
@@ -239,13 +238,17 @@ class MainWindow(QMainWindow):
 		self.canvas1 = FigureCanvas(self.fig1)
 
 		##### Falta acertar os limites do eixo X - grafico 2D
+		self.ax1.set_xlim((-self.px_base/2, +self.px_base/2))
 
 		##### Falta acertar os limites do eixo Y - grafico 2D
+		self.ax1.set_ylim((-self.px_altura/2, +self.px_altura/2))
 
 		##### Você deverá criar a função de projeção
 		object_2d = self.projection_2d()
 
 		##### Falta plotar o object_2d que retornou da projeção
+		self.ax1.plot(object_2d[0,:], object_2d[1,:], 'r')
+
 
 		self.ax1.grid(True)
 		self.ax1.set_aspect('equal')
@@ -284,6 +287,7 @@ class MainWindow(QMainWindow):
 		return
 
 	def projection_2d(self):
+		
 		return
 
 	def generate_intrinsic_params_matrix(self):

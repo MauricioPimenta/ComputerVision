@@ -43,5 +43,11 @@
 	},
 	"editor.insertSpaces": false,
 	"editor.indentSize": "tabSize",
-	"editor.stickyTabStops": true
+	"editor.stickyTabStops": true,
+	"editor.detectIndentation": false,
+	"[python]": {
+		"editor.tabSize": 4,
+		"editor.insertSpaces": false,
+		"editor.defaultFormatter": "KevinRose.vsc-python-indent"
+	}
 }
