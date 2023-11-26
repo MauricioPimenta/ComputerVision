@@ -287,7 +287,7 @@ class MainWindow(QMainWindow):
 		return
 
 	def projection_2d(self):
-		
+
 		return
 
 	def generate_intrinsic_params_matrix(self):
