@@ -16,7 +16,7 @@ import cv2 as cv
 #        T (matriz de normalização)
 def normalize_points(points):
 
-
+	norm_points = 
 
 	return norm_points, T
 
