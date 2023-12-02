@@ -28,12 +28,10 @@ def normalize_points(points):
 		return points, np.eye(3)
 
 	# Define the scale to have the average distance as sqrt(2)
-	
-	# Define the normalization matrix (similar transformation)
-	
-	# Normalize points
-	
 
+	# Define the normalization matrix (similar transformation)
+
+	# Normalize points
 
 
 	T = np.array([[np.sqrt(2)/mean_distance, 0, -np.sqrt(2)/mean_distance * centroid[0]],

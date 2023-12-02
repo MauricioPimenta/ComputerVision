@@ -16,7 +16,13 @@ import cv2 as cv
 #        T (matriz de normalização)
 def normalize_points(points):
 
-	norm_points = 
+	# Get centroid coords (Xc, Yc)
+	Xc, Yc = np.mean(points, axis=0)
+
+	
+	centered_pts = points - centroid
+
+	norm_points = np.dot(points, T)
 
 	return norm_points, T
 
@@ -121,11 +127,16 @@ def RANSAC(pts1, pts2, dis_threshold, N, Ninl):
 
 
 MIN_MATCH_COUNT = 10
-img1 = cv.imread('box.jpg', 0)   # queryImage
-img2 = cv.imread('photo01a.jpg', 0)        # trainImage
+img1 = cv.imread('./imagens/comicsStarWars01.jpg', 0)   # queryImage
+img2 = cv.imread('./imagens/comicsStarWars02.jpg', 0)        # trainImage
 
 # Inicialização do SIFT
-sift = cv.SIFT_create()
+try:
+	# Tentar usar a versão mais recente
+	sift = cv.SIFT_create()
+except AttributeError:
+	# Se falhar, tentar a versão mais antiga
+	sift = cv.xfeatures2d.SIFT_create()
 
 kp1, des1 = sift.detectAndCompute(img1, None)
 kp2, des2 = sift.detectAndCompute(img2, None)
@@ -144,11 +155,11 @@ for m, n in matches:
 		good.append(m)
 
 if len(good) > MIN_MATCH_COUNT:
-	src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1, 1, 2)
-	dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1, 1, 2)
+	src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ])#.reshape(-1, 1, 2)
+	dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ])#.reshape(-1, 1, 2)
 
 	#################################################
-	M = # AQUI ENTRA A SUA FUNÇÃO DE HOMOGRAFIA!!!!
+	M = np.identity(len(src_pts));# AQUI ENTRA A SUA FUNÇÃO DE HOMOGRAFIA!!!!
 	#################################################
 
 	img4 = cv.warpPerspective(img1, M, (img2.shape[1], img2.shape[0]))

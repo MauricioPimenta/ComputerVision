@@ -1,5 +1,5 @@
 # TRABALHO 2 DE VISÃO COMPUTACIONAL
-# Nome: 
+# Nome: MauricioBpimenta
 
 # Importa as bibliotecas necessárias
 # Acrescente qualquer outra que quiser
