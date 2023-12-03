@@ -17,10 +17,15 @@ import cv2 as cv
 def normalize_points(points):
 
 	# Get centroid coords (Xc, Yc)
-	Xc, Yc = np.mean(points, axis=0)
+	centroid = np.mean(points, axis=0)
 
-	
+	# translate points to have the centroid in (0,0)
 	centered_pts = points - centroid
+
+	# Calculate the average distance of all the points to the centroid (the origin)
+	mean_dist = np.mean(np.sqrt(np.sum(np.power(centered_pts, 2), axis=0)))
+
+
 
 	norm_points = np.dot(points, T)
 
