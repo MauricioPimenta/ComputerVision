@@ -5,7 +5,7 @@
 # Acrescente qualquer outra que quiser
 import numpy as np
 import matplotlib.pyplot as plt
-import math
+import math as m
 import cv2 as cv
 
 
@@ -25,9 +25,17 @@ def normalize_points(points):
 	# Calculate the average distance of all the points to the centroid (the origin)
 	mean_dist = np.mean(np.sqrt(np.sum(np.power(centered_pts, 2), axis=0)))
 
+	# Define the scale so the average distance is sqrt(2)
+	scale = m.sqrt(2)/mean_dist
 
+	# Define the Transformation Matrix to Normalize the points
+	T = np.array([[ scale  ,  0  , -scale*centroid[0]],
+			      [   0  , scale , -scale*centroid[1]],
+				  [   0  ,   0   ,        1          ]])
 
-	norm_points = np.dot(points, T)
+	# change points to the homogeneous coordinates
+	points_h = np.column_stack((points, np.ones(len(points))))
+	norm_points = np.dot(points_h, T)
 
 	return norm_points, T
 
@@ -63,16 +71,9 @@ def compute_A(pts1, pts2):
 # Saída: H (matriz de homografia estimada)
 def compute_normalized_dlt(pts1, pts2):
 
-	# # Add homogeneous coordinates
-	# pts1 = np.transpose(pts1)
-	# pts1 = np.vstack( (pts1, np.ones(np.shape(pts1[0]))) )
-
-	# pts2 = np.transpose(pts2)
-	# pts2 = np.vstack( (pts2, np.ones(np.shape(pts2[0]))) )
-
 	# Normaliza pontos
-	pts1_norm = normalize_points(pts1)
-	pts2_norm = normalize_points(pts2)
+	pts1_norm, T1 = normalize_points(pts1)
+	pts2_norm, T2 = normalize_points(pts2)
 
 	# Constrói o sistema de equações empilhando a matrix A de cada par de pontos correspondentes normalizados
 	A = compute_A(pts1_norm, pts2_norm)
@@ -83,9 +84,17 @@ def compute_normalized_dlt(pts1, pts2):
 	v = np.linalg.svd(A)    # return all three arrays into 'v'
 
 	# Takes the last column of the last array of 'v' and reshapes it as the homography matrix
-	H_matrix = np.reshape(v[-1][-1], (3,3)); print('\nH_Matrix: \n', H_matrix, '\n')
+	H_norm = np.reshape(v[-1][-1], (3,3)); print('\nH_Matrix: \n', H_norm, '\n')
 
 	# Denormaliza H_normalizada e obtém H
+	# we know that { Xĩ' = Hn.Xĩ }  (1)
+	# |Xĩ = T1.Xi	(2)
+	# |Xĩ' = T2.Xi' (3)
+	#
+	# So replacing (3) and (2) in (1), we'll have:
+	# T2.Xi' = Hn.T1.Xi   ->   Xi' = inv(T2).Hn.T1.Xi
+	# H = inv(T2)*H_norm*T1
+	H_matrix = np.linalg.inv(T2).dot(H_norm.dot(T1))
 
 	return H_matrix
 
@@ -98,12 +107,48 @@ def compute_normalized_dlt(pts1, pts2):
 # N: número máximo de iterações (pode ser definido dentro da função e deve ser atualizado
 #    dinamicamente de acordo com o número de inliers/outliers)
 # Ninl: limiar de inliers desejado (pode ser ignorado ou não - fica como decisão de vocês)
+#
 # Saídas:
 # H: homografia estimada
 # pts1_in, pts2_in: conjunto de inliers dos pontos da primeira e segunda imagens
-
-
 def RANSAC(pts1, pts2, dis_threshold, N, Ninl):
+
+	"""
+	RANSAC
+	------
+	Robust estimation of homography using RANSAC to remove Outliers from data.
+
+	-> Outliers are points with non gaussian error distribution (different and possibly unmodelled error distribution).
+
+	Parameters:
+	-----------
+		``pts1`` : ``numpy.ndarray`` with 2 dimensions.
+			points from first image
+
+		``pts2`` : ``numpy.ndarray`` with 2 dimensions.
+			points from second image
+
+		``dis_threshold`` : ``int``, default : 10
+			distance threshold for RANSAC - the maximum distance for points to be included as inliers.
+
+		``N`` : ``int``, default : 1000
+			Maximum number of iterations - change dinamically based on number of inliers/outliers
+
+		``Ninl`` : ``int``, default : ``None``
+			desired number of inliers - ignored by default
+
+	Returns
+	-------
+		``H`` : ``numpy.ndarray``
+			Estimated Homography Matrix if found. ``None`` otherwise.
+
+		``pts1_in`` : ``numpy.ndarray``
+			inliers from the first image
+
+		``pts2_in`` : ``numpy.ndarray``
+			inliers from the second image
+
+	"""
 
 	# Define outros parâmetros como número de amostras do modelo, probabilidades da equação de N, etc
 

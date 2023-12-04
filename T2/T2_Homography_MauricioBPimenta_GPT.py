@@ -187,8 +187,8 @@ for m, n in matches:
 		good.append(m)
 
 if len(good) > MIN_MATCH_COUNT:
-	src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1, 1, 2)
-	dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1, 1, 2)
+	src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ])#.reshape(-1, 1, 2)
+	dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ])#.reshape(-1, 1, 2)
 
 	# Aplicação da função RANSAC
 	#################################################
