@@ -320,8 +320,8 @@ def RANSAC(pts1 : np.ndarray, pts2 : np.ndarray, dis_threshold : float = 10.0, N
 		inliersCount = 0
 
 		# vectors to store the inliers
-		pts1_inliers = np.empty_like(pts1)
-		pts2_inliers = np.empty_like(pts1)
+		pts1_inliers = np.array(([[]]))
+		pts2_inliers = np.array(([[]]))
 
 		for j in range(numPoints) :
 			# check result of homography for pts1
@@ -337,14 +337,17 @@ def RANSAC(pts1 : np.ndarray, pts2 : np.ndarray, dis_threshold : float = 10.0, N
 
 			if dist < dis_threshold :
 				inliersCount += 1
-				pts1_inliers = np.append(pts1_inliers, np.atleast_2d(pts1[j]), axis=0)
+				#pts1_inliers = np.append(np.atleast_2d(pts1_inliers), np.atleast_2d(np.copy(pts1[j])))
+				pts1_inliers = np.append(np.atleast_2d(pts1_inliers), np.atleast_2d(pts1[j]), axis=0)
 				pts2_inliers = np.append(pts2_inliers, np.atleast_2d(pts2[j]), axis=0)
+
+				pts1_inliers = np.array(np.ndarray, dtype = 'float32', )
 
 		# Se o número de inliers é o maior obtido até o momento, guarda esse conjunto além das "s" amostras utilizadas.
 		# Atualiza também o número N de iterações necessárias
 		if inliersCount > max_inliers_count :
 			max_inliers_count = inliersCount	# get new number of inliers
-			best_pts1_in = pts1_inliers
+			best_pts1_in = np.pts1_inliers
 			best_pts2_in = pts2_inliers
 			best_H = compute_normalized_dlt(best_pts1_in, best_pts2_in)
 
