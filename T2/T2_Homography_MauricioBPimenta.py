@@ -21,7 +21,7 @@ def normalize_points(points : np.ndarray) -> [np.ndarray , np.ndarray] :
 	----------------
 
 	Function to normalize points.\n
-	It returns a ``ndarray`` containing the normalized points in homogeneous coordinates and 
+	It returns a ``ndarray`` containing the normalized points in homogeneous coordinates and
 	the Transformation Matrix ``T`` to change the ``points`` to the normalized space.
 	\n\n
 
@@ -64,11 +64,15 @@ def normalize_points(points : np.ndarray) -> [np.ndarray , np.ndarray] :
 	mean_dist = np.mean(np.sqrt(np.sum(np.power(centered_pts, 2), axis=0)))
 
 	# Define the scale so the average distance is sqrt(2)
-	scale = np.sqrt(2)/mean_dist
+	try:
+		scale = np.sqrt(2)/mean_dist
+	except ZeroDivisionError:
+		scale = np.sqrt(2)
+
 
 	# Define the Transformation Matrix to Normalize the points
 	T = np.array([[ scale  ,  0  , -scale*centroid[0]],
-			      [   0  , scale , -scale*centroid[1]],
+				  [   0  , scale , -scale*centroid[1]],
 				  [   0  ,   0   ,        1          ]])
 
 	# change points to the homogeneous coordinates
@@ -131,6 +135,9 @@ def compute_A(pts1 : np.ndarray, pts2 : np.ndarray) -> np.ndarray :
 		A[2*i+1, 0:3] = +pts2[2, i]*pts1[:,i]   # A[0:3] = +wi2*Xi.T
 		A[2*i+1, 6:9] = -pts2[0, i]*pts1[:,i]   # A[6:9] = -xi2*Xi.T
 
+	if A.any is np.NaN :
+		breakpoint()
+
 
 	return A
 
@@ -170,22 +177,24 @@ def compute_normalized_dlt(pts1 : np.ndarray, pts2 : np.ndarray) -> np.ndarray :
 	A = compute_A(pts1_norm, pts2_norm)
 
 	# Calcula o SVD da matriz A_empilhada e estima a homografia H_normalizada
-
 	# Perform SVD(A) = U.S.Vt to estimate the homography
-	v = np.linalg.svd(A)    # return all three arrays into 'v'
+	try:
+		v = np.linalg.svd(A)    # return all three arrays into 'v'
+	except:
+		H_matrix = np.eye(3)	# return the identity if there's a problem with obtaining SVD of A.
+	else:
+		# Takes the last column of the last array of 'v' and reshapes it as the homography matrix
+		H_norm = np.reshape(v[-1][-1], (3,3)); print('\nH_Matrix: \n', H_norm, '\n')
 
-	# Takes the last column of the last array of 'v' and reshapes it as the homography matrix
-	H_norm = np.reshape(v[-1][-1], (3,3)); print('\nH_Matrix: \n', H_norm, '\n')
-
-	# Denormaliza H_normalizada e obtém H
-	# we know that { Xĩ' = Hn.Xĩ }  (1)
-	# |Xĩ = T1.Xi	(2)
-	# |Xĩ' = T2.Xi' (3)
-	#
-	# So replacing (3) and (2) in (1), we'll have:
-	# T2.Xi' = Hn.T1.Xi   ->   Xi' = inv(T2).Hn.T1.Xi
-	# H = inv(T2)*H_norm*T1
-	H_matrix = (np.linalg.inv(T2)).dot(H_norm.dot(T1))
+		# Denormaliza H_normalizada e obtém H
+		# we know that { Xĩ' = Hn.Xĩ }  (1)
+		# |Xĩ = T1.Xi	(2)
+		# |Xĩ' = T2.Xi' (3)
+		#
+		# So replacing (3) and (2) in (1), we'll have:
+		# T2.Xi' = Hn.T1.Xi   ->   Xi' = inv(T2).Hn.T1.Xi
+		# H = inv(T2)*H_norm*T1
+		H_matrix = (np.linalg.inv(T2)).dot(H_norm.dot(T1))
 
 	return H_matrix
 
@@ -261,50 +270,46 @@ def RANSAC(pts1 : np.ndarray, pts2 : np.ndarray, dis_threshold : float = 10.0, N
 	max_inliers_count = Ninl
 
 	# Best homography matrix so far, computed from the inliers
-	best_H : np.ndarray = []
+	best_H = None
 
 	# the best data set of inliers so far
-	best_pts1_in : np.ndarray = []
-	best_pts2_in : np.ndarray = []
-
+	best_pts1_in = None
+	best_pts2_in = None
 
 
 	# Initial tests..
 	# check correct number of dimensions and minimun number of points
 	if pts1.ndim > arrayDimensions :
-		print("\n\nRANSAC FUNCTION: \n",
+		raise ValueError("\n\nRANSAC FUNCTION: \n",
 		"pts1 has greater number of dimensions than expected.\n",
 		"Expected: ",arrayDimensions,".\n",
 		"pts1 has: ", pts1.ndim,
 		"\n\n")
-		return
 	elif len(pts1) < minPoints :
-		print("\n\nRANSAC FUNCTION: \n",
+		raise ValueError("\n\nRANSAC FUNCTION: \n",
 		"pts1 should have more than 4 points to compute the RANSAC\n",
 		"Expected: ",minPoints,".\n",
 		"pts1 has: ", len(pts1),
 		"\n\n")
-		return
+
 	if pts2.ndim > arrayDimensions :
-		print("\n\nRANSAC FUNCTION: \n",
+		raise ValueError("\n\nRANSAC FUNCTION: \n",
 		"pts2 has greater number of dimensions than expected.\n",
 		"Expected: ",arrayDimensions,".\n",
 		"pts2 has: ", pts2.ndim,
 		"\n\n")
-		return
 	elif len(pts2) < minPoints :
-		print("\n\nRANSAC FUNCTION: \n",
+		raise ValueError("\n\nRANSAC FUNCTION: \n",
 		"pts2 should have more than 4 points to compute the RANSAC\n",
 		"Expected: ",minPoints,".\n",
 		"pts2 has: ", len(pts2),
 		"\n\n")
-		return
 
 	# Check number of inliers passed as parameter
 
-
+	i = 0
 	# Processo Iterativo
-	for i in range(iterations) :
+	while i < iterations :
 		# Enquanto não atende a critério de parada
 
 		# Sorteia aleatoriamente "s" amostras do conjunto de pares de pontos pts1 e pts2
@@ -312,16 +317,30 @@ def RANSAC(pts1 : np.ndarray, pts2 : np.ndarray, dis_threshold : float = 10.0, N
 		sampled_pts1 = pts1[indices]
 		sampled_pts2 = pts2[indices]
 
+		# Check if the sampled points are linearly independent. If not, start next iteration
+		if np.linalg.matrix_rank(sampled_pts1) != sampled_pts1.shape[1] :
+			i+=1
+			continue
+		if np.linalg.matrix_rank(sampled_pts2) != sampled_pts2.shape[1] :
+			i+=1
+			continue
+
 		# Usa as amostras para estimar uma homografia usando o DTL Normalizado
 		H_sampled = compute_normalized_dlt(sampled_pts1, sampled_pts2)
+
+		# Check if computed Homography Matrix is singular -> det(H) = 0 -> not invertible
+		# If singular, go to the next iteration without executing the rest of the loop
+		if np.isclose(np.linalg.det(H_sampled), 0.0):
+			i += 1		# increment the counter - iteration without correspondences
+			continue	# Go to the beggining of the loop
 
 		# Testa essa homografia com os demais pares de pontos usando o dis_threshold e contabiliza
 		# o número de supostos inliers obtidos com o modelo estimado
 		inliersCount = 0
 
 		# vectors to store the inliers
-		pts1_inliers = np.array(([[]]))
-		pts2_inliers = np.array(([[]]))
+		pts1_inliers = None
+		pts2_inliers = None
 
 		for j in range(numPoints) :
 			# check result of homography for pts1
@@ -337,28 +356,43 @@ def RANSAC(pts1 : np.ndarray, pts2 : np.ndarray, dis_threshold : float = 10.0, N
 
 			if dist < dis_threshold :
 				inliersCount += 1
-				#pts1_inliers = np.append(np.atleast_2d(pts1_inliers), np.atleast_2d(np.copy(pts1[j])))
-				pts1_inliers = np.append(np.atleast_2d(pts1_inliers), np.atleast_2d(pts1[j]), axis=0)
-				pts2_inliers = np.append(pts2_inliers, np.atleast_2d(pts2[j]), axis=0)
+				if pts1_inliers is None :
+					pts1_inliers = np.atleast_2d(pts1[j])
+				else :
+					pts1_inliers = np.append(np.atleast_2d(pts1_inliers), np.atleast_2d(pts1[j]), axis=0)
 
-				pts1_inliers = np.array(np.ndarray, dtype = 'float32', )
+				if pts2_inliers is None :
+					pts2_inliers = np.atleast_2d(pts2[j])
+				else :
+					pts2_inliers = np.append(np.atleast_2d(pts2_inliers), np.atleast_2d(pts2[j]), axis=0)
 
 		# Se o número de inliers é o maior obtido até o momento, guarda esse conjunto além das "s" amostras utilizadas.
 		# Atualiza também o número N de iterações necessárias
 		if inliersCount > max_inliers_count :
 			max_inliers_count = inliersCount	# get new number of inliers
-			best_pts1_in = np.pts1_inliers
+			best_pts1_in = pts1_inliers
 			best_pts2_in = pts2_inliers
 			best_H = compute_normalized_dlt(best_pts1_in, best_pts2_in)
 
 			# Compute new number of necessary iterations
 			w = (max_inliers_count/numPoints)
-			k = np.log10(1 - prob) / np.log10(1 - w**minPoints)
-			if k < iterations : iterations = k
+			k = int( np.log10(1 - prob) / np.log10(1 - w**minPoints) )
+
+			# Redefine the number of iteration.. Minimum of 100 iterations
+			if k < iterations :
+				if k < i :				# This might give some problem in the future, not sure yet..
+					iterations = i+10	# Always do 10 more iterations when finding better number of inliers
+				else:
+					iterations = k
+
+		# iterate the loop
+		i += 1
+
+	# end While
 
 
 	# Terminado o processo iterativo
-	if best_H == None :
+	if best_H is None :
 		raise ValueError('\n\n-- RANSAC -- No model found for these sets of points \n\n')
 
 	# Estima a homografia final H usando todos os inliers selecionados.
@@ -374,8 +408,8 @@ def RANSAC(pts1 : np.ndarray, pts2 : np.ndarray, dis_threshold : float = 10.0, N
 
 
 MIN_MATCH_COUNT = 10
-img1 = cv.imread('./imagens/comicsStarWars01.jpg', 0)   # queryImage
-img2 = cv.imread('./imagens/comicsStarWars02.jpg', 0)        # trainImage
+img1 = cv.imread('./imagens/batman.jpg', 0)   # queryImage
+img2 = cv.imread('./imagens/outdoor_batman.jpg', 0)        # trainImage
 
 # Inicialização do SIFT
 try:
@@ -406,7 +440,7 @@ if len(good) > MIN_MATCH_COUNT:
 	dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ])#.reshape(-1, 1, 2)
 
 	#################################################
-	M = RANSAC(src_pts, dst_pts);	# AQUI ENTRA A SUA FUNÇÃO DE HOMOGRAFIA!!!!
+	M , src_pts_inliers, dst_pts_inliers = RANSAC(src_pts, dst_pts);	# AQUI ENTRA A SUA FUNÇÃO DE HOMOGRAFIA!!!!
 	#################################################
 
 	img4 = cv.warpPerspective(img1, M, (img2.shape[1], img2.shape[0]))
