@@ -408,8 +408,8 @@ def RANSAC(pts1 : np.ndarray, pts2 : np.ndarray, dis_threshold : float = 10.0, N
 
 
 MIN_MATCH_COUNT = 10
-img1 = cv.imread('./imagens/batman.jpg', 0)   # queryImage
-img2 = cv.imread('./imagens/outdoor_batman.jpg', 0)        # trainImage
+img1 = cv.imread('./imagens/comicsStarWars01.jpg', 0)   # queryImage
+img2 = cv.imread('./imagens/comicsStarWars02.jpg', 0)        # trainImage
 
 # Inicialização do SIFT
 try:
