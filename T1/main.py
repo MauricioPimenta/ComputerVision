@@ -67,7 +67,7 @@ class MainWindow(QMainWindow):
 		# Criar os widgets
 		line_edit_widget1 = self.create_world_widget("Ref mundo")
 		line_edit_widget2  = self.create_cam_widget("Ref camera")
-		line_edit_widget3  = self.create_intrinsic_widget("params instr")
+		line_edit_widget3  = self.create_intrinsic_widget("params intrins")
 
 		self.canvas = self.create_matplotlib_canvas()
 

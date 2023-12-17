@@ -42,10 +42,9 @@ cameraDataPath = ["calibration data/0.json", "calibration data/1.json", "calibra
 
 # ---------------------------------------------------------------------------------------
 #																						|
-# 										Functions										|
+#									Camera  Class										|
 #																						|
 # ---------------------------------------------------------------------------------------
-
 class Camera:
 
 	def __init__(self, intrinsicParametersMatrix, resolution, transformMatrix, lensDistortion):
@@ -56,8 +55,8 @@ class Camera:
 		self.rotMatrix = transformMatrix[:3, :3]
 		self.translationMatrix = transformMatrix[:3, 3].reshape(3, 1)
 		self.projectionMatrix = Camera.computeProjectionMatrix(self.intrinsic, self.rotMatrix, self.translationMatrix)
-	
-	
+
+
 	def getIntrinsic(self):
 		return self.intrinsic
 
@@ -97,6 +96,12 @@ class Camera:
 		# Then, we apply the inverse of this 4x4 matrix, get the first three rows (to get back to a 3x4 matrix) and finally multiply with the intrinsic matrix K.
 		# This operation essentially performs the multiplication K*[inv([R|T])], but in the homogeneous coordinate system.
 		return np.dot(K, np.linalg.inv(np.vstack((np.hstack((R, T)),np.array([0,0,0,1]))))[:-1,:])
+
+# ---------------------------------------------------------------------------------------
+#																						|
+# 										Functions										|
+#																						|
+# ---------------------------------------------------------------------------------------
 
 def loadVideos(videosPath):
 
@@ -157,7 +162,6 @@ def loadVideos(videosPath):
 		cv.destroyAllWindows()
 
 	return points
-
 
 
 # ---------------------------------------------------------------------------------------
@@ -274,36 +278,41 @@ X = X[np.where(Z > -1)]
 Y = Y[np.where(Z > -1)]
 Z = Z[np.where(Z > -1)]
 
+
 # Create a new 3D plot
 fig = plt.figure(figsize=(10, 10))
-ax = fig.add_subplot(111, projection='3d')
+ax3D = fig.add_subplot(221, projection='3d')
 
 # Plot the 3D points
-ax.plot(X, Y, Z)
+ax3D.plot(X, Y, Z)
 
 # Set the labels for the axes
-ax.set_xlabel('X')
-ax.set_ylabel('Y')
-ax.set_zlabel('Z')
+ax3D.set_xlabel('X')
+ax3D.set_ylabel('Y')
+ax3D.set_zlabel('Z')
 
 # Set the limits for the axes
-ax.set_xlim([-1.8,1.8])
-ax.set_ylim([-1.8,1.8])
-ax.set_zlim([0,3.6])
+ax3D.set_xlim([-1.8,1.8])
+ax3D.set_ylim([-1.8,1.8])
+ax3D.set_zlim([0,3.6])
 
 # Create new figures for each coordinate in 2D
-fig = plt.figure()
-plt.plot(X)
-plt.title('X')
+Xaxes = fig.add_subplot(222)
+Xaxes.plot(X, color='red')
+Xaxes.set_title('X')
 
-fig = plt.figure()
-plt.plot(Y)
-plt.title('Y')
+Yaxes = fig.add_subplot(223)
+Yaxes.plot(Y, color='green')
+Yaxes.set_title('Y')
 
-fig = plt.figure()
-plt.plot(Z)
-plt.title('Z')
-plt.ylim([0.5, 0.7])
+Zaxes = fig.add_subplot(224)
+Zaxes.plot(Z, color='orange')
+Zaxes.set_title('Z')
+
+fig.tight_layout()
+fm = plt.get_current_fig_manager()
+fm.set_window_title('3D Reconstruction - press \'f\' to exit fullscreen')
+fm.full_screen_toggle()
 
 # Show all the plots
 plt.show()
