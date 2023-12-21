@@ -1,5 +1,6 @@
 import sys
 from matplotlib import axes, axis
+from matplotlib.pylab import Axes
 import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGridLayout, QLabel, QWidget, QLineEdit, QHBoxLayout, QVBoxLayout, QPushButton,QGroupBox
 from PyQt5.QtGui import QDoubleValidator
@@ -7,11 +8,64 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from mpl_toolkits.mplot3d import Axes3D, art3d
 import numpy as np
 from stl import mesh
+from math import pi,cos,sin
 
 
 ###### Crie suas funções de translação, rotação, criação de referenciais, plotagem de setas e qualquer outra função que precisar
 
-def getObjFromFile(filename):
+### Funções auxiliares -------------------------------------------
+
+def move (dx,dy,dz):
+	T = np.eye(4)
+	T[0,-1] = dx
+	T[1,-1] = dy
+	T[2,-1] = dz
+	return T
+
+def z_rotation(angle):
+	rotation_matrix=np.array([[cos(angle),-sin(angle),0,0],[sin(angle),cos(angle),0,0],[0,0,1,0],[0,0,0,1]])
+	return rotation_matrix
+
+def x_rotation(angle):
+	rotation_matrix=np.array([[1,0,0,0],[0, cos(angle),-sin(angle),0],[0, sin(angle), cos(angle),0],[0,0,0,1]])
+	return rotation_matrix
+
+def y_rotation(angle):
+	rotation_matrix=np.array([[cos(angle),0, sin(angle),0],[0,1,0,0],[-sin(angle), 0, cos(angle),0],[0,0,0,1]])
+	return rotation_matrix
+
+
+def set_plot(ax: Axes3D = None, figure = None, lim = [-2,2]):
+	if figure ==None:
+		figure = plt.figure(figsize=(8,8))
+	if ax==None:
+		ax = plt.axes(projection='3d')
+
+	ax.set_title("camera referecnce")
+	ax.set_xlim(lim)
+	ax.set_xlabel("x axis")
+	ax.set_ylim(lim)
+	ax.set_ylabel("y axis")
+	ax.set_zlim(lim)
+	ax.set_zlabel("z axis")
+	return ax
+
+#adding quivers to the plot
+def draw_arrows(point, base, axis, length=1.5):
+	# The object base is a matrix, where each column represents the vector
+	# of one of the axis, written in homogeneous coordinates (ax,ay,az,0)
+
+
+	# Plot vector of x-axis
+	axis.quiver(point[0],point[1],point[2],base[0,0],base[1,0],base[2,0],color='red',pivot='tail',  length=length)
+	# Plot vector of y-axis
+	axis.quiver(point[0],point[1],point[2],base[0,1],base[1,1],base[2,1],color='green',pivot='tail',  length=length)
+	# Plot vector of z-axis
+	axis.quiver(point[0],point[1],point[2],base[0,2],base[1,2],base[2,2],color='blue',pivot='tail',  length=length)
+
+	return axis
+
+def getObjFromFile(filename) -> np.ndarray :
 	# Load the STL files and add the vectors to the plot
 	your_mesh = mesh.Mesh.from_file(filename)
 
@@ -28,6 +82,8 @@ def getObjFromFile(filename):
 	# represent the object using homogeneous coordinates
 	return np.array([x.T,y.T,z.T,np.ones(x.size)])
 
+
+
 class MainWindow(QMainWindow):
 	def __init__(self):
 		super().__init__()
@@ -42,23 +98,43 @@ class MainWindow(QMainWindow):
 
 	def set_variables(self):
 		filename = 'megaman.STL'
-		self.objeto_original = getObjFromFile(filename) #modificar
-		self.objeto = self.objeto_original.copy()
+
+		self.objeto_original = getObjFromFile(filename) # Read Object from STL file
+		self.objeto = self.objeto_original.copy()		# Saves a copy of the object to work with
+
 		self.cam_original = np.array([	[1, 0, 0, 0],
 										[0, 1, 0, 0],
 										[0, 0, 1, 0],
-										[0, 0, 0, 1]]) #modificar
-		
-		self.cam = self.cam_original.copy() #modificar
-		self.px_base = 1280  #modificar
-		self.px_altura = 720 #modificar
-		self.dist_foc = 50 #modificar
-		self.stheta = 0 #modificar
-		self.ox = self.px_base/2 #modificar
-		self.oy = self.px_altura/2 #modificar
-		self.ccd = [36,24] #modificar
+										[0, 0, 0, 1]])
+		self.cam = self.cam_original.copy()
+
+		self.ccd = [36,24]		# Tamanho do sensor da camera, em mm (36 x 24)
+
+		self.px_base = 1280		# largura da imagem em px
+		self.px_altura = 720	# altura da imagem em px
+		self.img = np.array([self.px_base, self.px_altura]) # tamanho da imagem gerada, em px (1280 x 720)
+
+		self.f = 50		# Distancia Focal, em mm
+
+		# Fatores de Escala
+		self.Sx = self.img[0]/self.ccd[0]	# Sx = n_pixels_base/ccd_x
+		self.Sy = self.img[1]/self.ccd[1]	# Sy = n_pixels_altura/ccd_y
+		self.Stheta = 0						# S theta - Skew = 0 nesse caso
+
+		# Pontos da Referencia
+		# Ox e Oy sao as coordenadas, em pixels, do ponto central da imagem
+		self.Ox = self.px_base/2
+		self.Oy = self.px_altura/2
+
+		self.intrinsicParamMatrix = np.array([	[self.f*self.Sx,	self.Stheta,		self.Ox	],
+												[ 		0, 			self.f*self.Sy,		self.Oy	],
+												[ 		0, 				0,					1	]])
+
+		self.extrinsicParamMatrix = np.eye(4)
+
 		self.projection_matrix = [] #modificar
 
+		self.WorldRef = np.eye(4);	# Referencial do Mundo
 
 	def setup_ui(self):
 		# Criar o layout de grade
@@ -110,9 +186,6 @@ class MainWindow(QMainWindow):
 		# Definir o widget central na janela principal
 		self.setCentralWidget(central_widget)
 
-
-
-
 	def create_intrinsic_widget(self, title):
 		# Criar um widget para agrupar os QLineEdit
 		line_edit_widget = QGroupBox(title)
@@ -148,8 +221,6 @@ class MainWindow(QMainWindow):
 
 		# Retornar o widget e a lista de caixas de texto
 		return line_edit_widget
-
-
 
 	def create_world_widget(self, title):
 		# Criar um widget para agrupar os QLineEdit
@@ -187,7 +258,6 @@ class MainWindow(QMainWindow):
 		# Retornar o widget e a lista de caixas de texto
 		return line_edit_widget
 
-
 	def create_cam_widget(self, title):
 	 # Criar um widget para agrupar os QLineEdit
 		line_edit_widget = QGroupBox(title)
@@ -224,50 +294,28 @@ class MainWindow(QMainWindow):
 		# Retornar o widget e a lista de caixas de texto
 		return line_edit_widget
 
-
-
 	def create_matplotlib_canvas(self):
 		# Criar um widget para exibir os gráficos do Matplotlib
 		canvas_widget = QWidget()
 		canvas_layout = QHBoxLayout()
 		canvas_widget.setLayout(canvas_layout)
 
-		# Criar um objeto FigureCanvas para exibir o gráfico 2D
-		self.fig1, self.ax1 = plt.subplots()
-		self.ax1.set_title("Imagem")
-		self.canvas1 = FigureCanvas(self.fig1)
+		# initialize fig1 and ax2D
+		self.fig2D, self.ax2D = plt.subplots()
 
-		##### Falta acertar os limites do eixo X - grafico 2D
-		self.ax1.set_xlim((-self.px_base/2, +self.px_base/2))
+		# initialize fig3D and ax3D
+		self.fig3D = plt.figure()
+		self.ax3D: Axes = self.fig3D.add_subplot(111, projection='3d')
 
-		##### Falta acertar os limites do eixo Y - grafico 2D
-		self.ax1.set_ylim((-self.px_altura/2, +self.px_altura/2))
+		# Create the FigureCanvas Objects to display the 2D and 3D plots
+		self.canvas2D = FigureCanvas(self.fig2D)
+		canvas_layout.addWidget(self.canvas2D)
 
-		##### Você deverá criar a função de projeção
-		object_2d = self.projection_2d()
+		self.canvas3D = FigureCanvas(self.fig3D)
+		canvas_layout.addWidget(self.canvas3D)
 
-		##### Falta plotar o object_2d que retornou da projeção
-		self.ax1.plot(object_2d[0,:], object_2d[1,:], 'r')
-
-
-		self.ax1.grid(True)
-		self.ax1.set_aspect('equal')
-		canvas_layout.addWidget(self.canvas1)
-
-		# Criar um objeto FigureCanvas para exibir o gráfico 3D
-		self.fig2 = plt.figure()
-		#self.ax2 = plt.Axes
-		self.ax2 = self.fig2.add_subplot(111, projection='3d')
-
-		##### Falta plotar o seu objeto 3D e os referenciais da câmera e do mundo
-
-		# Plot the points drawing the lines
-		self.ax2.plot(self.objeto_original[0,:],self.objeto_original[1,:],self.objeto_original[2,:],'r')
-		self.ax2.set_aspect('equal')
-
-
-		self.canvas2 = FigureCanvas(self.fig2)
-		canvas_layout.addWidget(self.canvas2)
+		# Call the method to update the plots and display them in the canvas
+		self.update_canvas()
 
 		# Retornar o widget de canvas
 		return canvas_widget
@@ -277,6 +325,52 @@ class MainWindow(QMainWindow):
 	##### Você deverá criar as suas funções aqui
 
 	def update_params_intrinsc(self, line_edits):
+		# line_edits contains the list of QLineEdit widgets in the followinf order:
+		# [n_pixels_base, n_pixels_altura, ccd_x, ccd_y, dist_focal, sθ]
+		# each line_edits contains a double floating point number
+
+		# Check if the line_edits are empty before converting them to float
+		# and updating the intrinsic parameters
+		if line_edits[0].text() != '':
+			self.px_base = float(line_edits[0].text())
+			print('\n', self.px_base ,'\n')
+
+		if line_edits[1].text() != '':
+			self.px_altura = float(line_edits[1].text())
+			print('\n', self.px_altura ,'\n')
+
+		if line_edits[2].text() != '':
+			self.ccd[0] = float(line_edits[2].text())
+			print('\n', self.ccd[0] ,'\n')
+
+		if line_edits[3].text() != '':
+			self.ccd[1] = float(line_edits[3].text())
+			print('\n', self.ccd[1] ,'\n')
+
+		if line_edits[4].text() != '':
+			self.f = float(line_edits[4].text())
+			print('\n', self.f ,'\n')
+
+		if line_edits[5].text() != '':
+			self.Stheta = float(line_edits[5].text())	# S theta - Skew = 0 nesse caso
+			print('\n', self.Stheta ,'\n')
+
+
+		# Update the intrinsic parameters
+		self.img = np.array([self.px_base, self.px_altura]) # tamanho da imagem gerada, em px (1280 x 720)
+
+		# Fatores de Escala
+		self.Sx = self.img[0]/self.ccd[0]	# Sx = n_pixels_base/ccd_x
+		self.Sy = self.img[1]/self.ccd[1]	# Sy = n_pixels_altura/ccd_y
+
+		# Pontos da Referencia
+		# Ox e Oy sao as coordenadas, em pixels, do ponto central da imagem
+		self.Ox = self.px_base/2
+		self.Oy = self.px_altura/2
+
+		self.generate_intrinsic_params_matrix()
+
+		self.update_canvas()
 		return
 
 	def update_world(self,line_edits):
@@ -284,21 +378,141 @@ class MainWindow(QMainWindow):
 		return
 
 	def update_cam(self,line_edits):
+		'''
+			This Function updates the camera matrix based on the values of the line_edits.
+			It moves the camera by the ammount specified in the 'line_edits' always in accordance
+			  to the camera reference system. If the camera is moved in the x axis, it will move in
+			  its own x axis, and so on..
+
+			-> line_edits contains the list of QLineEdit widgets in the following order:
+			    [X(move), X(angle), Y(move), Y(angle), Z(move), Z(angle)]
+
+			Each line_edits contains a double floating point number
+		'''
+		# Temporary Matrix to store the transformations
+		TransformMatrix = np.eye(4)
+
+		if line_edits[0].text() != '':
+			dx = float(line_edits[0].text())
+			TransformMatrix = np.dot(TransformMatrix, move(dx,0,0))
+			print('\n dx: ', dx ,'\n')
+
+		if line_edits[1].text() != '':
+			theta_x = float(line_edits[1].text())
+			TransformMatrix = np.dot(TransformMatrix, x_rotation(np.deg2rad(theta_x)))
+			print('\n angX: ', theta_x ,'\n')
+
+		if line_edits[2].text() != '':
+			dy = float(line_edits[2].text())
+			TransformMatrix = np.dot(TransformMatrix, move(0,dy,0))
+			print('\n dy: ', dy ,'\n')
+
+		if line_edits[3].text() != '':
+			theta_y = float(line_edits[3].text())
+			TransformMatrix = np.dot(TransformMatrix, y_rotation(np.deg2rad(theta_y)))
+			print('\n angY: ', theta_y ,'\n')
+
+		if line_edits[4].text() != '':
+			dz = float(line_edits[4].text())
+			TransformMatrix = np.dot(TransformMatrix, move(0,0,dz))
+			print('\n dz: ', dz ,'\n')
+
+		if line_edits[5].text() != '':
+			# Get the angle in degrees
+			theta_z = float(line_edits[5].text())
+
+			# Update the TransformMatrix
+			TransformMatrix = np.dot(TransformMatrix, z_rotation(np.deg2rad(theta_z)))
+			print('\n angZ: ', theta_z ,'\n')
+
+
+		# Update the camera matrix using the transformation matrixes
+		print('\n Tmat: \n', TransformMatrix, '\n')
+
+		self.cam = np.dot(TransformMatrix, self.cam)
+		self.extrinsicParamMatrix = self.cam.copy()
+		print('\n Extrinsic: ', self.extrinsicParamMatrix, '\n')
+
+		self.update_canvas()
+
 		return
 
 	def projection_2d(self):
+		# Projectio Matrix = IntrinsicMatrix x PIo x ExtrinsicMatrix
+		PIo = np.eye(3,4, dtype='float')
 
-		return
+		Proj = np.linalg.multi_dot([self.intrinsicParamMatrix, PIo, self.extrinsicParamMatrix])
+
+		print('\n ProjM: ', Proj, '\n')
+
+		# Projection and creation of the image
+		object_2d = np.dot(Proj, self.objeto)
+
+		# Preparacao das coordenadas na forma cartesiana
+		object_2d /= object_2d[-1]		# Normaliza a coord 'z'
+		print('\nObj2D: ', object_2d, '\n')
+
+		self.projection_matrix = Proj
+
+		return object_2d
 
 	def generate_intrinsic_params_matrix(self):
+		self.intrinsicParamMatrix = np.array([	[self.f*self.Sx,	self.Stheta,		self.Ox	],
+												[ 		0, 			self.f*self.Sy,		self.Oy	],
+												[ 		0, 				0,					1	]])
 		return
 
+	# Update the canvas with the plots of the 2D and 3D objects
 	def update_canvas(self):
+
+		## Clear and update the 2D Plot and Canvas
+		self.ax2D.clear()
+
+		self.ax2D.set_title("Imagem")
+		##### Falta acertar os limites do eixo X - grafico 2D
+		self.ax2D.set_xlim((0, self.px_base))
+
+		##### Falta acertar os limites do eixo Y - grafico 2D
+		self.ax2D.set_ylim(self.px_altura, 0)
+
+		##### Você deverá criar a função de projeção
+		object_2d = self.projection_2d()
+
+		##### Falta plotar o object_2d que retornou da projeção
+		self.ax2D.plot(object_2d[0], object_2d[1], 'g')
+
+		self.ax2D.grid(True)
+		self.ax2D.set_aspect('equal')
+
+		self.canvas2D.draw()
+
+
+		## Clear and update the 3D Plot and Canvas
+		self.ax3D.clear()
+
+		# Plot the points drawing the lines
+		self.ax3D.plot(self.objeto_original[0,:],self.objeto_original[1,:],self.objeto_original[2,:],'r')
+		# self.ax3D.set_xlim(-40,40)
+		# self.ax3D.set_ylim(-40,40)
+		self.ax3D.set_aspect('equal')
+
+		# Draw Camera Arrows
+		self.ax3D = draw_arrows(self.cam[:,-1], self.cam[:,0:3], self.ax3D, 10)
+
+		# Draw World Reference Arrows
+		self.ax3D = draw_arrows(self.WorldRef[:,-1], self.WorldRef[:,0:3], self.ax3D, 10)
+
+		self.canvas3D.draw()
+
 		return
+
 
 	def reset_canvas(self):
+		self.set_variables()
+		self.update_canvas()
 
 		return
+
 
 
 if __name__ == '__main__':
