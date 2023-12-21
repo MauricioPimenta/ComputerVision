@@ -390,7 +390,7 @@ class MainWindow(QMainWindow):
 			Each line_edits contains a double floating point number
 		'''
 		# Temporary Matrix to store the transformations
-		TransformMatrix = np.eye(4)
+		TransformMatrix = self.extrinsicParamMatrix.copy()
 
 		if line_edits[0].text() != '':
 			dx = float(line_edits[0].text())
@@ -429,8 +429,10 @@ class MainWindow(QMainWindow):
 		# Update the camera matrix using the transformation matrixes
 		print('\n Tmat: \n', TransformMatrix, '\n')
 
-		self.cam = np.dot(TransformMatrix, self.cam)
-		self.extrinsicParamMatrix = self.cam.copy()
+		# Put the camera back to origin, make the transformation and then put it back to its original position
+		
+		self.cam = np.linalg.inv(self.extrinsicParamMatrix) @ TransformMatrix @ self.extrinsicParamMatrix @ self.cam
+		self.extrinsicParamMatrix = np.linalg.inv(self.cam)
 		print('\n Extrinsic: ', self.extrinsicParamMatrix, '\n')
 
 		self.update_canvas()
